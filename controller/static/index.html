@@ -4,94 +4,184 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 		<title>Basic Temperature Chart</title>
 
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+		<script type="text/javascript" src="/js/jquery-1.9.1.js"></script>
+                
+                <link rel="stylesheet" type="text/css" media="screen" href="css/excite-bike/jquery-ui.min.css" />
+                <link rel="stylesheet" type="text/css" media="screen" href="css/ui.jqgrid.css" />
+                <script src="js/i18n/grid.locale-en.js" type="text/javascript"></script>
+                <script src="js/jquery.jqGrid.min.js" type="text/javascript"></script>
+
 		<script type="text/javascript">
+
+
+// temperature chart -----------------------------------------------------------
 
 $(document).ready(function() {
 
+    // get the labels
+    var labelsData;
     $.ajax({
-        url: '/all-time-temperature-chart-data',
+        url: '/all-time-temperature-chart-events',
         success: function(json) {
+            labels = JSON.parse(json);
+            var labelsData = [];
+            for (var i = 0; i < labels.length; i++)
+            {
+                var x = labels[i].Date;
+                var y = 14;
+                var message = labels[i].Value;
+                labelsData.push([x, y, message]);
+            }
 
-            var chartData = JSON.parse(json);
 
-            var seriesData = [];
-                for (var i = 0; i < chartData.length; i++)
-                {
-                    var x = chartData[i].Date;
-                    var y = chartData[i].Value;
-                    seriesData.push([x, y]);
-                }
+            // get the data for sensor 1
+            $.ajax({
+                url: '/all-time-temperature-chart-data?sensorId=1',
+                success: function(json) {
 
-            var chart = new Highcharts.Chart({
-                chart: {
-                    renderTo: 'container',
-                    zoomType: 'x',
-                    defaultSeriesType: 'spline'
-                },
-                title : {
-                    text: 'Fermentation Vessel Temperature'
-                },
-                xAxis: {
-                    title: {
-                        text: 'Time'
-                    },
-                    type: 'datetime'
-                },
-                yAxis: {
-                    title: {
-                        text: 'Temperature'
-                    },
-                    plotBands: [{
-                        from: 18,
-                        to: 20.0,
-                        color: 'rgba(68, 170, 213, 0.1)',
-                        label: {
-                            text: 'Target Range',
-                            style: {
-                                color: '#606060'
-                            }
+                    var chartData = JSON.parse(json);
+                    var seriesData1 = [];
+                        for (var i = 0; i < chartData.length; i++)
+                        {
+                            var x = chartData[i].Date;
+                            var y = chartData[i].Value;
+                            seriesData1.push([x, y]);
                         }
-                    },{
-                        from: 18.75,
-                        to: 19.75,
-                        color: 'rgba(68, 170, 213, 0.1)',
-                        label: {
-                            text: 'Heater Trigger',
-                            style: {
-                                color: '#303060'
-                            }
-                        }
-                    }
-                ]
-                },
-                plotOptions: {
-                    spline: {
-                        marker: {
-                            radius: 0
-                        }
-                    }
-                },
-                series: [{
-                    name: 'Sensor #1',
-                    data: seriesData
-                }]
-            });
 
-        },
-        cache: false
+                    // get the data for sensor 2
+                    $.ajax({
+                        url: '/all-time-temperature-chart-data?sensorId=2',
+                        success: function(json) {
+
+                            var chartData = JSON.parse(json);
+                            var seriesData2 = [];
+                                for (var i = 0; i < chartData.length; i++)
+                                {
+                                    var x = chartData[i].Date;
+                                    var y = chartData[i].Value;
+                                    seriesData2.push([x, y]);
+                                }
+
+
+                            var chart = new Highcharts.Chart({
+                                chart: {
+                                    renderTo: 'container',
+                                    zoomType: 'x',
+                                    defaultSeriesType: 'spline'
+                                },
+                                title : {
+                                    text: 'Fermentation Vessel Temperature'
+                                },
+                                xAxis: {
+                                    title: {
+                                        text: 'Time'
+                                    },
+                                    type: 'datetime'
+                                },
+                                yAxis: {
+                                    title: {
+                                        text: 'Temperature'
+                                    },
+                                    plotBands: [{
+                                        from: 18,
+                                        to: 20.0,
+                                        color: 'rgba(68, 170, 213, 0.1)',
+                                        label: {
+                                            text: 'Target Range',
+                                            style: {
+                                                color: '#606060'
+                                            }
+                                        }
+                                    },{
+                                        from: 19.5,
+                                        to: 19.9,
+                                        color: 'rgba(68, 170, 213, 0.1)',
+                                        label: {
+                                            text: 'Heater Trigger',
+                                            style: {
+                                                color: '#303060'
+                                            }
+                                        }
+                                    }
+                                ]
+                                },
+                                plotOptions: {
+                                    spline: {
+                                        marker: {
+                                            radius: 0
+                                        }
+                                    }
+                                },
+                                series: [
+                                {
+                                    name: 'Sensor #1',
+                                    data: seriesData1
+                                },
+                                {
+                                    name: 'Sensor #2',
+                                    data: seriesData2
+                                },
+                                {
+                                    name: 'Events',
+                                    type: 'scatter',
+                                    data: labelsData,
+                                    marker: {radius: 5, fillColor: '#303060', symbol: 'triangle'},
+                                    showInLegend: false, dataLabels: { enabled: true,formatter: function(){return '';}}}
+                                ]
+                            }); // end chart
+
+
+                        }, // end ajax success
+                        cache: false
+                    }); // end ajax                
+                    
+                }, // end ajax success
+                cache: false
+            }); // end ajax
+            
+        }
     });
-
 });
 
-        </script>
-    </head>
 
+
+// events table ----------------------------------------------------------------
+
+$(function(){ 
+  $("#list").jqGrid({
+    url:'/all-time-temperature-chart-events-data',
+    datatype: 'json',
+    mtype: 'GET',
+    colNames:['Event Time','Description'],
+    colModel :[ 
+      {name:'event_time', index:'event_time', width: 200, sortable: false}, 
+      {name:'description', index:'description', width: 800, sortable: false} 
+    ],
+    pager: '#pager',
+    rowNum:10,
+    rowList:[10,20,30],
+    sortname: 'event_time',
+    sortorder: 'desc',
+    viewrecords: true,
+    gridview: true,
+    caption: 'Events',
+    autowidth: true
+  }); 
+}); 
+
+    </script>
+</head>
 <body>
-<script src="../../js/highcharts.js"></script>
-<script src="../../js/modules/exporting.js"></script>
 
-<div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+    <script src="../../js/highcharts.js"></script>
+    <script src="../../js/modules/exporting.js"></script>
 
-	</body>
+    <div id="container" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+
+    <div style="margin: 0px 50px 0px 50px">
+        <table id="list"><tr><td></td></tr></table> 
+        <div id="pager"></div> 
+    </div>
+    
+</body>
 </html>

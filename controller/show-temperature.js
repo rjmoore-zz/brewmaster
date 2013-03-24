@@ -13,14 +13,18 @@ var server = http.createServer(function (request, response) {
   child = exec('cat /sys/bus/w1/devices/28-*/w1_slave',   // command line argument directly in string
     function (error, stdout, stderr) {                    // one easy function to capture data/errors
     
-      var temperature = S(S(stdout).trim().s).right(5).s;
-      temperature = S(temperature).left(2).s + '.' + S(temperature).right(3).s + ' degrees';
-      //console.log('stdout: ' + stdout);
+      var lines = S(stdout).lines();
+      var t1 = S(S(lines[1]).trim().s).right(5).s;
+      var t2 = S(S(lines[3]).trim().s).right(5).s;
+          
+      /*var temperature = S(S(stdout).trim().s).right(5).s;
+      temperature = S(temperature).left(2).s + '.' + S(temperature).right(3).s + ' degrees';*/
+      
       if (stderr !== '') console.log('stderr: ' + stderr);
       if (error !== null) {
         console.log('exec error: ' + error);
       }
-      response.end(temperature);
+      response.end(t1 + "," + t2);
     }
   );
 
