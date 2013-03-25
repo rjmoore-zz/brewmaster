@@ -2,6 +2,7 @@
 
 var sqlite3 = require('sqlite3');
 var S = require('string');
+var Q = require('q');
 
 // default values
 var lowerTrigger = 19;
@@ -9,6 +10,8 @@ var upperTrigger = 20;
 var heaterOnCommand = 'sudo bash /home/pi/dev/heater/switchon.sh';
 var heaterOffCommand = 'sudo bash /home/pi/dev/heater/switchoff.sh';
 
+console.log((new Date())+' =======================================');
+            
 var temperatureDB = new sqlite3.Database("/home/pi/dev/db/temperature.db");
 temperatureDB.serialize(function() {
 
@@ -18,25 +21,25 @@ temperatureDB.serialize(function() {
         function(err, rowsData) {
             if (rowsData !== undefined) {
                 for (n = 0;n < rowsData.length;n++) {
-                    if (rowsData[n].key_name == 'lower_trigger') {
+                    if (rowsData[n].key_name === 'lower_trigger') {
                         lowerTrigger = rowsData[n].value;
                         console.log('lower_trigger=' + lowerTrigger);
-                    } else if (rowsData[n].key_name == 'upper_trigger')
+                    } else if (rowsData[n].key_name === 'upper_trigger')
                     {
                         upperTrigger = rowsData[n].value;
                         console.log('upper_trigger=' + upperTrigger);
-                    } else if (rowsData[n].key_name == 'heater_on_command')
+                    } else if (rowsData[n].key_name === 'heater_on_command')
                     {
                         heaterOnCommand = rowsData[n].value;
                         console.log('heater_on_command=' + heaterOnCommand);
-                    } else if (rowsData[n].key_name == 'heater_off_command')
+                    } else if (rowsData[n].key_name === 'heater_off_command')
                     {
                         heaterOffCommand = rowsData[n].value;
                         console.log('heater_off_command=' + heaterOffCommand);
                     }
                 }
             }
-       
+                   
             var util = require('util'),
                 exec = require('child_process').exec,
                 child;
@@ -57,41 +60,50 @@ temperatureDB.serialize(function() {
                 console.log('exec error: ' + error);
               }
 
-              if (S(t1).isNumeric()) {
-                // write temperature to db
-                var temperatureDB_insert = new sqlite3.Database("/home/pi/dev/db/temperature.db");
-                temperatureDB_insert.serialize(function() {
-                  var stmt = temperatureDB_insert.prepare("INSERT INTO temperatures VALUES (datetime(),1,?)");
-                  stmt.run(temperature1);
-                  stmt.finalize();
-                });
-                temperatureDB_insert.close();
-              }
+
+              // write temperatures to db
+              Q.fcall(function() {
+                if (S(t1).isNumeric()) {
+                  console.log('starting db1');
+                  var temperatureDB_insert = new sqlite3.Database("/home/pi/dev/db/temperature.db");
+                  temperatureDB_insert.serialize(function() {
+                    var stmt = temperatureDB_insert.prepare("INSERT INTO temperatures VALUES (datetime(),1,?)");
+                    stmt.run(temperature1);
+                    stmt.finalize();
+                  });
+                  temperatureDB_insert.close();
+                  console.log('finished db1');
+                }
+              }).then(function() {
+                if (S(t2).isNumeric()) {
+                  console.log('starting db2');
+                  temperatureDB_insert = new sqlite3.Database("/home/pi/dev/db/temperature.db");
+                  temperatureDB_insert.serialize(function() {
+                    var stmt = temperatureDB_insert.prepare("INSERT INTO temperatures VALUES (datetime(),2,?)");
+                    stmt.run(temperature2);
+                    stmt.finalize();
+                  });
+                  temperatureDB_insert.close();
+                  console.log('finished db2');
+                }
+              });
               
-              if (S(t2).isNumeric()) {
-                temperatureDB_insert = new sqlite3.Database("/home/pi/dev/db/temperature.db");
-                temperatureDB_insert.serialize(function() {
-                  var stmt = temperatureDB_insert.prepare("INSERT INTO temperatures VALUES (datetime(),2,?)");
-                  stmt.run(temperature2);
-                  stmt.finalize();
-                });
-                temperatureDB_insert.close();
-              }
               
               // activate heater if required
-              console.log('user triggers '+lowerTrigger+'/'+upperTrigger+'. temperature=' + temperature1);
-              if (parseFloat(temperature1) < lowerTrigger) {
+              console.log('user triggers '+lowerTrigger+'/'+upperTrigger+'. temperature1=' + temperature1 + ' temperature2=' + temperature2);
+              if (parseFloat(temperature2) < lowerTrigger) {
                   console.log('switching on heater..');
                   child = exec(heaterOnCommand, function (error, stdout, stderr) {});
                 }
-              if (parseFloat(temperature1) > upperTrigger) {
+              if (parseFloat(temperature2) > upperTrigger) {
                   console.log('switching off heater..');
                   child = exec(heaterOffCommand, function (error, stdout, stderr) {});
               }
 
+
         }); // end get sensor value
 
-    }); // end get trigger values
+    }); // end get config values
         
     temperatureDB.close();
     

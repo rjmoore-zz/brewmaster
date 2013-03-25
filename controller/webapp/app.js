@@ -120,7 +120,27 @@ app.get('/all-time-temperature-chart-events-data', function(req, res) {
     temperatureDB.close();
 });
 
+app.get('/show-configuration', function(req, res) {
+    var rows = [];
+            
+    res.send("<h3>Configuration</h3>");
+    res.send("<table>");
+    var configurationDB = new sqlite3.Database("/home/pi/dev/db/temperature.db");
+    configurationDB.serialize(function() {
 
+        configurationDB.all(
+            "SELECT key_name,value FROM configuration", 
+        function(err, rowsData) {
+            if (rowsData !== undefined) {
+                for (n = 0;n < rowsData.length;n++) {
+                    res.send('<tr>' + rowsData[n].key_name + ' = ' + rowsData[n].value);
+                }
+            }
+        });
+    });    
+    res.send("<table>");
+    configurationDB.close();
+});
 // ----------------------------------------------------------
 app.use(function(err, req, res, next) {
   console.error(err.stack);
